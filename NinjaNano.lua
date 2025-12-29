@@ -1,4 +1,4 @@
-local lp = game.Players.LocalPlayer
+8local lp = game.Players.LocalPlayer
 local rEvents = game:GetService("ReplicatedStorage"):WaitForChild("rEvents")
 local ninjaEvent = lp:WaitForChild("ninjaEvent")
 local RunService = game:GetService("RunService")
@@ -256,7 +256,7 @@ ContentArea.Position = UDim2.new(0, 115, 0, 5)
 ContentArea.BackgroundTransparency = 1
 ContentArea.Parent = Main
 
--- // НОВАЯ СИСТЕМА ПОЛЕТА (MAX ACCURATE) //
+-- // FLY SYSTEM: CAMERA-RELATIVE (UP/DOWN/FORWARD/BACK) //
 local FlySettings = {
     speed = 100,
     flying = false
@@ -293,7 +293,7 @@ function CreateFlyUI()
     local Title = Instance.new("TextLabel")
     Title.Size = UDim2.new(1, 0, 0, 30)
     Title.BackgroundTransparency = 1
-    Title.Text = "FLY PRO"
+    Title.Text = "FLY DIRECTIONAL"
     Title.TextColor3 = Color3.fromRGB(255, 255, 255)
     Title.Font = Enum.Font.GothamBlack
     Title.TextSize = 10
@@ -337,7 +337,6 @@ function CreateFlyUI()
         if not hrp or not hum then return end
 
         if FlySettings.flying then
-            -- Чтобы персонаж не падал и не крутился
             local bv = Instance.new("BodyVelocity")
             bv.Name = "FlyVel"
             bv.Parent = hrp
@@ -353,23 +352,27 @@ function CreateFlyUI()
             task.spawn(function()
                 while FlySettings.flying and char.Parent do
                     local cam = workspace.CurrentCamera
-                    -- Направление движения джойстика/клавиш
-                    local moveDir = hum.MoveDirection 
+                    local moveDir = hum.MoveDirection -- Джойстик
                     
-                    -- ПК кнопки высоты
-                    local upStack = 0
-                    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then upStack = 1 end
-                    if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then upStack = -1 end
-
-                    -- ОСНОВНОЙ РАСЧЕТ СКОРОСТИ (теперь реально быстро)
-                    if moveDir.Magnitude > 0 or upStack ~= 0 then
-                        bv.velocity = (moveDir * FlySettings.speed) + (Vector3.new(0, upStack, 0) * FlySettings.speed)
+                    -- Если двигаем джойстик
+                    if moveDir.Magnitude > 0 then
+                        -- РАСЧЕТ: Вектор камеры (LookVector) умножаем на силу джойстика
+                        -- Это заставляет персонажа лететь именно туда, куда направлен взгляд (включая верх и низ)
+                        bv.velocity = cam.CFrame.LookVector * (moveDir.Magnitude * FlySettings.speed)
+                        
+                        -- Если тянем джойстик назад (moveDir инвертирован относительно LookVector), 
+                        -- проверяем угол, чтобы корректно лететь спиной
+                        local dot = cam.CFrame.LookVector:Dot(moveDir)
+                        if dot < 0 then
+                           -- Если идем назад, инвертируем вектор взгляда для полета
+                           bv.velocity = moveDir * FlySettings.speed
+                        end
                     else
                         bv.velocity = Vector3.new(0, 0, 0)
                     end
 
-                    -- Поворачиваем персонажа за камерой, но не наклоняем его
-                    bg.cframe = CFrame.new(hrp.Position, hrp.Position + cam.CFrame.LookVector)
+                    -- Вращаем тело персонажа за камерой
+                    bg.cframe = cam.CFrame
                     task.wait()
                 end
                 bv:Destroy()
@@ -379,194 +382,6 @@ function CreateFlyUI()
     end)
 end
 
-        
-
--- // TABS SYSTEM //
-local tabs = {}
-local function createTab(name, order)
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(0, 90, 0, 28)
-    b.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-    b.Text = name
-    b.TextColor3 = Color3.fromRGB(150, 150, 150)
-    b.Font = Enum.Font.GothamBold
-    b.TextSize = 10
-    b.Parent = MenuContainer
-    b.LayoutOrder = order
-    b.ZIndex = 3
-    b.AutoButtonColor = false
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-
-    local page = Instance.new("Frame")
-    page.Size = UDim2.new(1, 0, 1, 0)
-    page.BackgroundTransparency = 1
-    page.Visible = false
-    page.Parent = ContentArea
-
-    b.MouseButton1Click:Connect(function()
-        for _, v in pairs(tabs) do 
-            v.page.Visible = false
-            v.b.TextColor3 = Color3.fromRGB(150, 150, 150)
-            v.b.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-        end
-        page.Visible = true
-        b.TextColor3 = Color3.fromRGB(255, 255, 255)
-        b.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-    end)
-
-    tabs[name] = {b = b, page = page}
-    return page
-end
-
-local MainPage = createTab("MAIN", 1)
-local AutofarmPage = createTab("AUTOFARM", 2)
-local WorldPage = createTab("WORLD", 3)
-local PlayerPage = createTab("PLAYER", 4)
-local ExtraPage = createTab("EXTRA", 5)
-local ElementsPage = createTab("ELEMENTS", 6)
-
-tabs["MAIN"].page.Visible = true
-tabs["MAIN"].b.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-tabs["MAIN"].b.TextColor3 = Color3.fromRGB(255, 255, 255)
-
--- Helper Functions
-local function createScroll(parent)
-    local s = Instance.new("ScrollingFrame")
-    s.Size = UDim2.new(1, 0, 1, 0)
-    s.BackgroundTransparency = 1
-    s.ScrollBarThickness = 2
-    s.Parent = parent
-    local l = Instance.new("UIListLayout", s)
-    l.Padding = UDim.new(0, 6)
-    l.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    l:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        s.CanvasSize = UDim2.new(0, 0, 0, l.AbsoluteContentSize.Y + 10)
-    end)
-    return s
-end
-
-local function AddToggle(parent, text, globalVar, callback)
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(0.98, 0, 0, 32)
-    b.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-    b.Text = text .. " [OFF]"
-    b.TextColor3 = Color3.fromRGB(255, 100, 100)
-    b.Font = Enum.Font.GothamMedium
-    b.TextSize = 11
-    b.Parent = parent
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
-    b.MouseButton1Click:Connect(function()
-        getgenv()[globalVar] = not getgenv()[globalVar]
-        b.Text = text .. (getgenv()[globalVar] and " [ON]" or " [OFF]")
-        b.TextColor3 = getgenv()[globalVar] and Color3.fromRGB(100, 255, 120) or Color3.fromRGB(255, 100, 100)
-        if getgenv()[globalVar] then
-            task.spawn(function()
-                while getgenv()[globalVar] do callback() task.wait(0.1) end
-            end)
-        end
-    end)
-end
-
-local function AddButton(parent, text, callback, color)
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(0.98, 0, 0, 32)
-    b.BackgroundColor3 = color or Color3.fromRGB(45, 45, 50)
-    b.Text = text
-    b.TextColor3 = Color3.fromRGB(240, 240, 240)
-    b.Font = Enum.Font.GothamMedium
-    b.TextSize = 11
-    b.Parent = parent
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
-    b.MouseButton1Click:Connect(callback)
-end
-
-local function CreateSelector(parent, title, dataList, teleportFunc)
-    local Container = Instance.new("Frame")
-    Container.Size = UDim2.new(0.98, 0, 0, 85)
-    Container.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-    Container.Parent = parent
-    Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 8)
-
-    local TitleLbl = Instance.new("TextLabel")
-    TitleLbl.Size = UDim2.new(1, 0, 0, 20)
-    TitleLbl.Position = UDim2.new(0, 0, 0, 5)
-    TitleLbl.BackgroundTransparency = 1
-    TitleLbl.Text = title
-    TitleLbl.TextColor3 = Color3.fromRGB(150, 150, 150)
-    TitleLbl.Font = Enum.Font.GothamBold
-    TitleLbl.TextSize = 10
-    TitleLbl.Parent = Container
-
-    local currentIndex = 1
-    
-    local NameDisplay = Instance.new("TextLabel")
-    NameDisplay.Size = UDim2.new(0.6, 0, 0, 25)
-    NameDisplay.Position = UDim2.new(0.2, 0, 0, 25)
-    NameDisplay.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-    NameDisplay.TextColor3 = Color3.fromRGB(255, 200, 50)
-    NameDisplay.Font = Enum.Font.GothamMedium
-    NameDisplay.TextSize = 10
-    NameDisplay.TextWrapped = true
-    NameDisplay.Parent = Container
-    Instance.new("UICorner", NameDisplay).CornerRadius = UDim.new(0, 4)
-
-    local function UpdateText()
-        local item = dataList[currentIndex]
-        if type(item) == "string" then
-            NameDisplay.Text = item
-        else
-            NameDisplay.Text = "["..item.id.."] " .. item.name
-        end
-    end
-    UpdateText()
-
-    local PrevBtn = Instance.new("TextButton")
-    PrevBtn.Size = UDim2.new(0.15, 0, 0, 25)
-    PrevBtn.Position = UDim2.new(0.03, 0, 0, 25)
-    PrevBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
-    PrevBtn.Text = "<"
-    PrevBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    PrevBtn.Font = Enum.Font.GothamBold
-    PrevBtn.Parent = Container
-    Instance.new("UICorner", PrevBtn).CornerRadius = UDim.new(0, 4)
-    PrevBtn.MouseButton1Click:Connect(function()
-        currentIndex = currentIndex - 1
-        if currentIndex < 1 then currentIndex = #dataList end
-        UpdateText()
-    end)
-
-    local NextBtn = Instance.new("TextButton")
-    NextBtn.Size = UDim2.new(0.15, 0, 0, 25)
-    NextBtn.Position = UDim2.new(0.82, 0, 0, 25)
-    NextBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
-    NextBtn.Text = ">"
-    NextBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    NextBtn.Font = Enum.Font.GothamBold
-    NextBtn.Parent = Container
-    Instance.new("UICorner", NextBtn).CornerRadius = UDim.new(0, 4)
-    NextBtn.MouseButton1Click:Connect(function()
-        currentIndex = currentIndex + 1
-        if currentIndex > #dataList then currentIndex = 1 end
-        UpdateText()
-    end)
-
-    local TpBtn = Instance.new("TextButton")
-    TpBtn.Size = UDim2.new(0.94, 0, 0, 25)
-    TpBtn.Position = UDim2.new(0.03, 0, 1, -30)
-    TpBtn.BackgroundColor3 = Color3.fromRGB(60, 100, 60)
-    TpBtn.Text = "SELECT / GET"
-    TpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TpBtn.Font = Enum.Font.GothamBold
-    TpBtn.TextSize = 12
-    TpBtn.Parent = Container
-    Instance.new("UICorner", TpBtn).CornerRadius = UDim.new(0, 6)
-
-    TpBtn.MouseButton1Click:Connect(function()
-        local item = dataList[currentIndex]
-        local targetName = (type(item) == "string") and item or item.name
-        teleportFunc(targetName)
-    end)
-end
 
 -- ==================================================
 -- 1. MAIN TAB (NEW)
