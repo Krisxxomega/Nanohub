@@ -256,132 +256,192 @@ ContentArea.Position = UDim2.new(0, 115, 0, 5)
 ContentArea.BackgroundTransparency = 1
 ContentArea.Parent = Main
 
--- // FLY SYSTEM: CAMERA-RELATIVE (UP/DOWN/FORWARD/BACK) //
-local FlySettings = {
-    speed = 100,
-    flying = false
-}
+-- // TABS SYSTEM //
+local tabs = {}
+local function createTab(name, order)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(0, 90, 0, 28)
+    b.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+    b.Text = name
+    b.TextColor3 = Color3.fromRGB(150, 150, 150)
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 10
+    b.Parent = MenuContainer
+    b.LayoutOrder = order
+    b.ZIndex = 3
+    b.AutoButtonColor = false
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
 
-function CreateFlyUI()
-    if ScreenGui:FindFirstChild("FlyMenu") then return end
+    local page = Instance.new("Frame")
+    page.Size = UDim2.new(1, 0, 1, 0)
+    page.BackgroundTransparency = 1
+    page.Visible = false
+    page.Parent = ContentArea
 
-    local FlyMenu = Instance.new("Frame")
-    FlyMenu.Name = "FlyMenu"
-    FlyMenu.Size = UDim2.new(0, 160, 0, 120)
-    FlyMenu.Position = UDim2.new(0.5, 150, 0.5, -60)
-    FlyMenu.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-    FlyMenu.BorderSizePixel = 0
-    FlyMenu.Parent = ScreenGui
-    FlyMenu.Active = true
-    Instance.new("UICorner", FlyMenu).CornerRadius = UDim.new(0, 10)
-    AddRainbow(FlyMenu)
-    MakeDraggable(FlyMenu, FlyMenu)
-
-    local CloseBtn = Instance.new("TextButton")
-    CloseBtn.Size = UDim2.new(0, 20, 0, 20)
-    CloseBtn.Position = UDim2.new(1, -25, 0, 5)
-    CloseBtn.Text = "X"
-    CloseBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-    CloseBtn.BackgroundTransparency = 1
-    CloseBtn.Font = Enum.Font.GothamBold
-    CloseBtn.Parent = FlyMenu
-    CloseBtn.MouseButton1Click:Connect(function() 
-        FlySettings.flying = false 
-        FlyMenu:Destroy() 
+    b.MouseButton1Click:Connect(function()
+        for _, v in pairs(tabs) do 
+            v.page.Visible = false
+            v.b.TextColor3 = Color3.fromRGB(150, 150, 150)
+            v.b.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+        end
+        page.Visible = true
+        b.TextColor3 = Color3.fromRGB(255, 255, 255)
+        b.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
     end)
 
-    local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, 0, 0, 30)
-    Title.BackgroundTransparency = 1
-    Title.Text = "FLY DIRECTIONAL"
-    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Title.Font = Enum.Font.GothamBlack
-    Title.TextSize = 10
-    Title.Parent = FlyMenu
+    tabs[name] = {b = b, page = page}
+    return page
+end
 
-    local SpeedInput = Instance.new("TextBox")
-    SpeedInput.Size = UDim2.new(0.85, 0, 0, 28)
-    SpeedInput.Position = UDim2.new(0.075, 0, 0.3, 0)
-    SpeedInput.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-    SpeedInput.Text = tostring(FlySettings.speed)
-    SpeedInput.TextColor3 = Color3.fromRGB(255, 200, 50)
-    SpeedInput.Font = Enum.Font.GothamMedium
-    SpeedInput.TextSize = 12
-    SpeedInput.Parent = FlyMenu
-    Instance.new("UICorner", SpeedInput).CornerRadius = UDim.new(0, 6)
+local MainPage = createTab("MAIN", 1)
+local AutofarmPage = createTab("AUTOFARM", 2)
+local WorldPage = createTab("WORLD", 3)
+local PlayerPage = createTab("PLAYER", 4)
+local ExtraPage = createTab("EXTRA", 5)
+local ElementsPage = createTab("ELEMENTS", 6)
 
-    SpeedInput.FocusLost:Connect(function()
-        local n = tonumber(SpeedInput.Text)
-        if n then FlySettings.speed = n end
+tabs["MAIN"].page.Visible = true
+tabs["MAIN"].b.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+tabs["MAIN"].b.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+-- Helper Functions
+local function createScroll(parent)
+    local s = Instance.new("ScrollingFrame")
+    s.Size = UDim2.new(1, 0, 1, 0)
+    s.BackgroundTransparency = 1
+    s.ScrollBarThickness = 2
+    s.Parent = parent
+    local l = Instance.new("UIListLayout", s)
+    l.Padding = UDim.new(0, 6)
+    l.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    l:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        s.CanvasSize = UDim2.new(0, 0, 0, l.AbsoluteContentSize.Y + 10)
     end)
+    return s
+end
 
-    local ToggleBtn = Instance.new("TextButton")
-    ToggleBtn.Size = UDim2.new(0.85, 0, 0, 32)
-    ToggleBtn.Position = UDim2.new(0.075, 0, 0.65, 0)
-    ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-    ToggleBtn.Text = "FLY: OFF"
-    ToggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-    ToggleBtn.Font = Enum.Font.GothamBold
-    ToggleBtn.TextSize = 11
-    ToggleBtn.Parent = FlyMenu
-    Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 6)
-
-    ToggleBtn.MouseButton1Click:Connect(function()
-        FlySettings.flying = not FlySettings.flying
-        ToggleBtn.Text = FlySettings.flying and "FLY: ON" or "FLY: OFF"
-        ToggleBtn.TextColor3 = FlySettings.flying and Color3.fromRGB(100, 255, 120) or Color3.fromRGB(255, 100, 100)
-        
-        local char = lp.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if not hrp or not hum then return end
-
-        if FlySettings.flying then
-            local bv = Instance.new("BodyVelocity")
-            bv.Name = "FlyVel"
-            bv.Parent = hrp
-            bv.maxForce = Vector3.new(1, 1, 1) * math.huge
-            bv.velocity = Vector3.new(0, 0, 0)
-
-            local bg = Instance.new("BodyGyro")
-            bg.Name = "FlyGyro"
-            bg.Parent = hrp
-            bg.maxTorque = Vector3.new(1, 1, 1) * math.huge
-            bg.P = 20000
-            
+local function AddToggle(parent, text, globalVar, callback)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(0.98, 0, 0, 32)
+    b.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    b.Text = text .. " [OFF]"
+    b.TextColor3 = Color3.fromRGB(255, 100, 100)
+    b.Font = Enum.Font.GothamMedium
+    b.TextSize = 11
+    b.Parent = parent
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+    b.MouseButton1Click:Connect(function()
+        getgenv()[globalVar] = not getgenv()[globalVar]
+        b.Text = text .. (getgenv()[globalVar] and " [ON]" or " [OFF]")
+        b.TextColor3 = getgenv()[globalVar] and Color3.fromRGB(100, 255, 120) or Color3.fromRGB(255, 100, 100)
+        if getgenv()[globalVar] then
             task.spawn(function()
-                while FlySettings.flying and char.Parent do
-                    local cam = workspace.CurrentCamera
-                    local moveDir = hum.MoveDirection -- Джойстик
-                    
-                    -- Если двигаем джойстик
-                    if moveDir.Magnitude > 0 then
-                        -- РАСЧЕТ: Вектор камеры (LookVector) умножаем на силу джойстика
-                        -- Это заставляет персонажа лететь именно туда, куда направлен взгляд (включая верх и низ)
-                        bv.velocity = cam.CFrame.LookVector * (moveDir.Magnitude * FlySettings.speed)
-                        
-                        -- Если тянем джойстик назад (moveDir инвертирован относительно LookVector), 
-                        -- проверяем угол, чтобы корректно лететь спиной
-                        local dot = cam.CFrame.LookVector:Dot(moveDir)
-                        if dot < 0 then
-                           -- Если идем назад, инвертируем вектор взгляда для полета
-                           bv.velocity = moveDir * FlySettings.speed
-                        end
-                    else
-                        bv.velocity = Vector3.new(0, 0, 0)
-                    end
-
-                    -- Вращаем тело персонажа за камерой
-                    bg.cframe = cam.CFrame
-                    task.wait()
-                end
-                bv:Destroy()
-                bg:Destroy()
+                while getgenv()[globalVar] do callback() task.wait(0.1) end
             end)
         end
     end)
 end
 
+local function AddButton(parent, text, callback, color)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(0.98, 0, 0, 32)
+    b.BackgroundColor3 = color or Color3.fromRGB(45, 45, 50)
+    b.Text = text
+    b.TextColor3 = Color3.fromRGB(240, 240, 240)
+    b.Font = Enum.Font.GothamMedium
+    b.TextSize = 11
+    b.Parent = parent
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+    b.MouseButton1Click:Connect(callback)
+end
+
+local function CreateSelector(parent, title, dataList, teleportFunc)
+    local Container = Instance.new("Frame")
+    Container.Size = UDim2.new(0.98, 0, 0, 85)
+    Container.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    Container.Parent = parent
+    Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 8)
+
+    local TitleLbl = Instance.new("TextLabel")
+    TitleLbl.Size = UDim2.new(1, 0, 0, 20)
+    TitleLbl.Position = UDim2.new(0, 0, 0, 5)
+    TitleLbl.BackgroundTransparency = 1
+    TitleLbl.Text = title
+    TitleLbl.TextColor3 = Color3.fromRGB(150, 150, 150)
+    TitleLbl.Font = Enum.Font.GothamBold
+    TitleLbl.TextSize = 10
+    TitleLbl.Parent = Container
+
+    local currentIndex = 1
+    
+    local NameDisplay = Instance.new("TextLabel")
+    NameDisplay.Size = UDim2.new(0.6, 0, 0, 25)
+    NameDisplay.Position = UDim2.new(0.2, 0, 0, 25)
+    NameDisplay.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    NameDisplay.TextColor3 = Color3.fromRGB(255, 200, 50)
+    NameDisplay.Font = Enum.Font.GothamMedium
+    NameDisplay.TextSize = 10
+    NameDisplay.TextWrapped = true
+    NameDisplay.Parent = Container
+    Instance.new("UICorner", NameDisplay).CornerRadius = UDim.new(0, 4)
+
+    local function UpdateText()
+        local item = dataList[currentIndex]
+        if type(item) == "string" then
+            NameDisplay.Text = item
+        else
+            NameDisplay.Text = "["..item.id.."] " .. item.name
+        end
+    end
+    UpdateText()
+
+    local PrevBtn = Instance.new("TextButton")
+    PrevBtn.Size = UDim2.new(0.15, 0, 0, 25)
+    PrevBtn.Position = UDim2.new(0.03, 0, 0, 25)
+    PrevBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+    PrevBtn.Text = "<"
+    PrevBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    PrevBtn.Font = Enum.Font.GothamBold
+    PrevBtn.Parent = Container
+    Instance.new("UICorner", PrevBtn).CornerRadius = UDim.new(0, 4)
+    PrevBtn.MouseButton1Click:Connect(function()
+        currentIndex = currentIndex - 1
+        if currentIndex < 1 then currentIndex = #dataList end
+        UpdateText()
+    end)
+
+    local NextBtn = Instance.new("TextButton")
+    NextBtn.Size = UDim2.new(0.15, 0, 0, 25)
+    NextBtn.Position = UDim2.new(0.82, 0, 0, 25)
+    NextBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+    NextBtn.Text = ">"
+    NextBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    NextBtn.Font = Enum.Font.GothamBold
+    NextBtn.Parent = Container
+    Instance.new("UICorner", NextBtn).CornerRadius = UDim.new(0, 4)
+    NextBtn.MouseButton1Click:Connect(function()
+        currentIndex = currentIndex + 1
+        if currentIndex > #dataList then currentIndex = 1 end
+        UpdateText()
+    end)
+
+    local TpBtn = Instance.new("TextButton")
+    TpBtn.Size = UDim2.new(0.94, 0, 0, 25)
+    TpBtn.Position = UDim2.new(0.03, 0, 1, -30)
+    TpBtn.BackgroundColor3 = Color3.fromRGB(60, 100, 60)
+    TpBtn.Text = "SELECT / GET"
+    TpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TpBtn.Font = Enum.Font.GothamBold
+    TpBtn.TextSize = 12
+    TpBtn.Parent = Container
+    Instance.new("UICorner", TpBtn).CornerRadius = UDim.new(0, 6)
+
+    TpBtn.MouseButton1Click:Connect(function()
+        local item = dataList[currentIndex]
+        local targetName = (type(item) == "string") and item or item.name
+        teleportFunc(targetName)
+    end)
+end
 
 -- ==================================================
 -- 1. MAIN TAB (NEW)
@@ -519,9 +579,6 @@ AddButton(PlayerScroll, "OPEN SHOP", function()
     task.wait(0.4)
     workspace.shopAreaCircles.shopAreaCircle19.circleInner.CFrame = CFrame.new(0, 0, 0)
 end, Color3.fromRGB(60, 120, 60))
-AddButton(PlayerScroll, "Open Fly Menu (Custom)", function()
-    CreateFlyUI()
-end, Color3.fromRGB(100, 60, 150))
 
 AddButton(PlayerScroll, "Inf Jumps (999M)", function() lp.multiJumpCount.Value = 999999999 end)
 AddButton(PlayerScroll, "Speed X200", function() lp.Character.Humanoid.WalkSpeed = 200 end)
