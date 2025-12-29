@@ -1,4 +1,4 @@
-8local lp = game.Players.LocalPlayer
+local lp = game.Players.LocalPlayer
 local rEvents = game:GetService("ReplicatedStorage"):WaitForChild("rEvents")
 local ninjaEvent = lp:WaitForChild("ninjaEvent")
 local RunService = game:GetService("RunService")
