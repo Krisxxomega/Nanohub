@@ -255,6 +255,109 @@ ContentArea.Size = UDim2.new(1, -120, 1, -10)
 ContentArea.Position = UDim2.new(0, 115, 0, 5)
 ContentArea.BackgroundTransparency = 1
 ContentArea.Parent = Main
+-- // FLY SYSTEM (MOBILE & PC) //
+local FlySettings = {
+    speed = 50,
+    flying = false
+}
+
+local function CreateFlyUI()
+    if ScreenGui:FindFirstChild("FlyMenu") then ScreenGui.FlyMenu:Destroy() end
+
+    local FlyMenu = Instance.new("Frame")
+    FlyMenu.Name = "FlyMenu"
+    FlyMenu.Size = UDim2.new(0, 150, 0, 100)
+    FlyMenu.Position = UDim2.new(0.5, 100, 0.5, -50)
+    FlyMenu.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    FlyMenu.Parent = ScreenGui
+    FlyMenu.Active = true
+    Instance.new("UICorner", FlyMenu).CornerRadius = UDim.new(0, 10)
+    AddRainbow(FlyMenu) -- Твой RGB эффект
+    MakeDraggable(FlyMenu, FlyMenu)
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, 0, 0, 25)
+    Title.BackgroundTransparency = 1
+    Title.Text = "FLY CONTROL"
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 10
+    Title.Parent = FlyMenu
+
+    local SpeedInput = Instance.new("TextBox")
+    SpeedInput.Size = UDim2.new(0.8, 0, 0, 25)
+    SpeedInput.Position = UDim2.new(0.1, 0, 0.3, 0)
+    SpeedInput.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+    SpeedInput.Text = tostring(FlySettings.speed)
+    SpeedInput.TextColor3 = Color3.fromRGB(255, 200, 50)
+    SpeedInput.Font = Enum.Font.GothamMedium
+    SpeedInput.TextSize = 12
+    SpeedInput.Parent = FlyMenu
+    Instance.new("UICorner", SpeedInput).CornerRadius = UDim.new(0, 4)
+
+    SpeedInput.FocusLost:Connect(function()
+        local n = tonumber(SpeedInput.Text)
+        if n then FlySettings.speed = n else SpeedInput.Text = tostring(FlySettings.speed) end
+    end)
+
+    local ToggleBtn = Instance.new("TextButton")
+    ToggleBtn.Size = UDim2.new(0.8, 0, 0, 25)
+    ToggleBtn.Position = UDim2.new(0.1, 0, 0.65, 0)
+    ToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+    ToggleBtn.Text = "TOGGLE FLY"
+    ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ToggleBtn.Font = Enum.Font.GothamBold
+    ToggleBtn.TextSize = 10
+    ToggleBtn.Parent = FlyMenu
+    Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 4)
+
+    ToggleBtn.MouseButton1Click:Connect(function()
+        FlySettings.flying = not FlySettings.flying
+        ToggleBtn.BackgroundColor3 = FlySettings.flying and Color3.fromRGB(60, 120, 60) or Color3.fromRGB(45, 45, 50)
+        
+        local char = lp.Character
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        if FlySettings.flying then
+            local bg = Instance.new("BodyGyro", hrp)
+            bg.Name = "FlyGyro"
+            bg.P = 9e4
+            bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+            bg.cframe = hrp.CFrame
+            
+            local bv = Instance.new("BodyVelocity", hrp)
+            bv.Name = "FlyVel"
+            bv.velocity = Vector3.new(0, 0.1, 0)
+            bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
+
+            task.spawn(function()
+                while FlySettings.flying and char.Parent do
+                    local cam = workspace.CurrentCamera
+                    local moveDir = char.Humanoid.MoveDirection
+                    local up = UserInputService:IsKeyDown(Enum.KeyCode.Space) and 1 or (UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) and -1 or 0)
+                    
+                    -- Адаптация под мобильные (если нет кнопок, летит по направлению камеры)
+                    if moveDir.Magnitude > 0 then
+                        bv.velocity = (cam.CFrame.LookVector * moveDir.Z + cam.CFrame.RightVector * moveDir.X).Unit * FlySettings.speed
+                    else
+                        bv.velocity = Vector3.new(0, 0.1, 0)
+                    end
+                    
+                    -- Обработка высоты (Space)
+                    if up ~= 0 then
+                        bv.velocity = bv.velocity + Vector3.new(0, up * FlySettings.speed, 0)
+                    end
+
+                    bg.cframe = cam.CFrame
+                    task.wait()
+                end
+                bg:Destroy()
+                bv:Destroy()
+            end)
+        end
+    end)
+end
 
 -- // TABS SYSTEM //
 local tabs = {}
@@ -579,6 +682,9 @@ AddButton(PlayerScroll, "OPEN SHOP", function()
     task.wait(0.4)
     workspace.shopAreaCircles.shopAreaCircle19.circleInner.CFrame = CFrame.new(0, 0, 0)
 end, Color3.fromRGB(60, 120, 60))
+AddButton(PlayerScroll, "Open Fly Menu (Custom)", function()
+    CreateFlyUI()
+end, Color3.fromRGB(100, 60, 150))
 
 AddButton(PlayerScroll, "Inf Jumps (999M)", function() lp.multiJumpCount.Value = 999999999 end)
 AddButton(PlayerScroll, "Speed X200", function() lp.Character.Humanoid.WalkSpeed = 200 end)
