@@ -255,109 +255,131 @@ ContentArea.Size = UDim2.new(1, -120, 1, -10)
 ContentArea.Position = UDim2.new(0, 115, 0, 5)
 ContentArea.BackgroundTransparency = 1
 ContentArea.Parent = Main
--- // FLY SYSTEM (MOBILE & PC) //
+
+-- // НОВАЯ СИСТЕМА ПОЛЕТА (MAX ACCURATE) //
 local FlySettings = {
-    speed = 50,
+    speed = 100,
     flying = false
 }
 
-local function CreateFlyUI()
-    if ScreenGui:FindFirstChild("FlyMenu") then ScreenGui.FlyMenu:Destroy() end
+function CreateFlyUI()
+    if ScreenGui:FindFirstChild("FlyMenu") then return end
 
     local FlyMenu = Instance.new("Frame")
     FlyMenu.Name = "FlyMenu"
-    FlyMenu.Size = UDim2.new(0, 150, 0, 100)
-    FlyMenu.Position = UDim2.new(0.5, 100, 0.5, -50)
-    FlyMenu.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    FlyMenu.Size = UDim2.new(0, 160, 0, 120)
+    FlyMenu.Position = UDim2.new(0.5, 150, 0.5, -60)
+    FlyMenu.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    FlyMenu.BorderSizePixel = 0
     FlyMenu.Parent = ScreenGui
     FlyMenu.Active = true
     Instance.new("UICorner", FlyMenu).CornerRadius = UDim.new(0, 10)
-    AddRainbow(FlyMenu) -- Твой RGB эффект
+    AddRainbow(FlyMenu)
     MakeDraggable(FlyMenu, FlyMenu)
 
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Size = UDim2.new(0, 20, 0, 20)
+    CloseBtn.Position = UDim2.new(1, -25, 0, 5)
+    CloseBtn.Text = "X"
+    CloseBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+    CloseBtn.BackgroundTransparency = 1
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.Parent = FlyMenu
+    CloseBtn.MouseButton1Click:Connect(function() 
+        FlySettings.flying = false 
+        FlyMenu:Destroy() 
+    end)
+
     local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, 0, 0, 25)
+    Title.Size = UDim2.new(1, 0, 0, 30)
     Title.BackgroundTransparency = 1
-    Title.Text = "FLY CONTROL"
+    Title.Text = "FLY PRO"
     Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Title.Font = Enum.Font.GothamBold
+    Title.Font = Enum.Font.GothamBlack
     Title.TextSize = 10
     Title.Parent = FlyMenu
 
     local SpeedInput = Instance.new("TextBox")
-    SpeedInput.Size = UDim2.new(0.8, 0, 0, 25)
-    SpeedInput.Position = UDim2.new(0.1, 0, 0.3, 0)
-    SpeedInput.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+    SpeedInput.Size = UDim2.new(0.85, 0, 0, 28)
+    SpeedInput.Position = UDim2.new(0.075, 0, 0.3, 0)
+    SpeedInput.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
     SpeedInput.Text = tostring(FlySettings.speed)
     SpeedInput.TextColor3 = Color3.fromRGB(255, 200, 50)
     SpeedInput.Font = Enum.Font.GothamMedium
     SpeedInput.TextSize = 12
     SpeedInput.Parent = FlyMenu
-    Instance.new("UICorner", SpeedInput).CornerRadius = UDim.new(0, 4)
+    Instance.new("UICorner", SpeedInput).CornerRadius = UDim.new(0, 6)
 
     SpeedInput.FocusLost:Connect(function()
         local n = tonumber(SpeedInput.Text)
-        if n then FlySettings.speed = n else SpeedInput.Text = tostring(FlySettings.speed) end
+        if n then FlySettings.speed = n end
     end)
 
     local ToggleBtn = Instance.new("TextButton")
-    ToggleBtn.Size = UDim2.new(0.8, 0, 0, 25)
-    ToggleBtn.Position = UDim2.new(0.1, 0, 0.65, 0)
-    ToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
-    ToggleBtn.Text = "TOGGLE FLY"
-    ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ToggleBtn.Size = UDim2.new(0.85, 0, 0, 32)
+    ToggleBtn.Position = UDim2.new(0.075, 0, 0.65, 0)
+    ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+    ToggleBtn.Text = "FLY: OFF"
+    ToggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
     ToggleBtn.Font = Enum.Font.GothamBold
-    ToggleBtn.TextSize = 10
+    ToggleBtn.TextSize = 11
     ToggleBtn.Parent = FlyMenu
-    Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 4)
+    Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 6)
 
     ToggleBtn.MouseButton1Click:Connect(function()
         FlySettings.flying = not FlySettings.flying
-        ToggleBtn.BackgroundColor3 = FlySettings.flying and Color3.fromRGB(60, 120, 60) or Color3.fromRGB(45, 45, 50)
+        ToggleBtn.Text = FlySettings.flying and "FLY: ON" or "FLY: OFF"
+        ToggleBtn.TextColor3 = FlySettings.flying and Color3.fromRGB(100, 255, 120) or Color3.fromRGB(255, 100, 100)
         
         local char = lp.Character
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if not hrp or not hum then return end
 
         if FlySettings.flying then
-            local bg = Instance.new("BodyGyro", hrp)
-            bg.Name = "FlyGyro"
-            bg.P = 9e4
-            bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
-            bg.cframe = hrp.CFrame
-            
-            local bv = Instance.new("BodyVelocity", hrp)
+            -- Чтобы персонаж не падал и не крутился
+            local bv = Instance.new("BodyVelocity")
             bv.Name = "FlyVel"
-            bv.velocity = Vector3.new(0, 0.1, 0)
-            bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
+            bv.Parent = hrp
+            bv.maxForce = Vector3.new(1, 1, 1) * math.huge
+            bv.velocity = Vector3.new(0, 0, 0)
 
+            local bg = Instance.new("BodyGyro")
+            bg.Name = "FlyGyro"
+            bg.Parent = hrp
+            bg.maxTorque = Vector3.new(1, 1, 1) * math.huge
+            bg.P = 20000
+            
             task.spawn(function()
                 while FlySettings.flying and char.Parent do
                     local cam = workspace.CurrentCamera
-                    local moveDir = char.Humanoid.MoveDirection
-                    local up = UserInputService:IsKeyDown(Enum.KeyCode.Space) and 1 or (UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) and -1 or 0)
+                    -- Направление движения джойстика/клавиш
+                    local moveDir = hum.MoveDirection 
                     
-                    -- Адаптация под мобильные (если нет кнопок, летит по направлению камеры)
-                    if moveDir.Magnitude > 0 then
-                        bv.velocity = (cam.CFrame.LookVector * moveDir.Z + cam.CFrame.RightVector * moveDir.X).Unit * FlySettings.speed
+                    -- ПК кнопки высоты
+                    local upStack = 0
+                    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then upStack = 1 end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then upStack = -1 end
+
+                    -- ОСНОВНОЙ РАСЧЕТ СКОРОСТИ (теперь реально быстро)
+                    if moveDir.Magnitude > 0 or upStack ~= 0 then
+                        bv.velocity = (moveDir * FlySettings.speed) + (Vector3.new(0, upStack, 0) * FlySettings.speed)
                     else
-                        bv.velocity = Vector3.new(0, 0.1, 0)
-                    end
-                    
-                    -- Обработка высоты (Space)
-                    if up ~= 0 then
-                        bv.velocity = bv.velocity + Vector3.new(0, up * FlySettings.speed, 0)
+                        bv.velocity = Vector3.new(0, 0, 0)
                     end
 
-                    bg.cframe = cam.CFrame
+                    -- Поворачиваем персонажа за камерой, но не наклоняем его
+                    bg.cframe = CFrame.new(hrp.Position, hrp.Position + cam.CFrame.LookVector)
                     task.wait()
                 end
-                bg:Destroy()
                 bv:Destroy()
+                bg:Destroy()
             end)
         end
     end)
 end
+
+        
 
 -- // TABS SYSTEM //
 local tabs = {}
