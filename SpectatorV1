@@ -1,0 +1,482 @@
+--[[
+    OMNITRIX WIDGET V4 [MASTER EDITION]
+    Refactored for: Efficiency, Compactness, Data Density
+    Author: Gemini Master
+]]
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- // ЗАЩИТА ОТ ДУБЛИКАТОВ // --
+if getgenv().TitanV4Running then return end
+getgenv().TitanV4Running = true
+
+-- // НАСТРОЙКИ // --
+local Settings = {
+    Noclip = false,
+    Xray = false,
+    AutoView = false
+}
+
+local ParentGui = CoreGui
+pcall(function()
+    if not ParentGui then ParentGui = LocalPlayer:WaitForChild("PlayerGui") end
+end)
+
+-- // СОЗДАНИЕ GUI // --
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "OmnitrixV4"
+ScreenGui.Parent = ParentGui
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- // ШРИФТЫ // --
+local FONT_BOLD = Enum.Font.GothamBold
+local FONT_CODE = Enum.Font.Code
+
+-- // 1. МИНИ-КНОПКА (TOGGLE) // --
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name = "OpenBtn"
+ToggleBtn.Size = UDim2.new(0, 45, 0, 45)
+ToggleBtn.Position = UDim2.new(0.02, 0, 0.4, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+ToggleBtn.Text = "V4"
+ToggleBtn.TextColor3 = Color3.new(1,1,1)
+ToggleBtn.Font = FONT_BOLD
+ToggleBtn.TextSize = 18
+ToggleBtn.AutoButtonColor = false
+ToggleBtn.Parent = ScreenGui
+
+local ToggleStroke = Instance.new("UIStroke")
+ToggleStroke.Thickness = 2
+ToggleStroke.Parent = ToggleBtn
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
+
+-- // 2. ГЛАВНАЯ ПАНЕЛЬ // --
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "Main"
+MainFrame.Size = UDim2.new(0, 340, 0, 260) -- Компакт, но выше для инфы
+MainFrame.Position = UDim2.new(0.5, -170, 0.4, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+MainFrame.BorderSizePixel = 0
+MainFrame.Visible = false
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Thickness = 2
+MainStroke.Parent = MainFrame
+
+-- // RGB ЦИКЛ // --
+task.spawn(function()
+    while true do
+        for i = 0, 1, 0.005 do
+            local color = Color3.fromHSV(i, 0.8, 1)
+            ToggleStroke.Color = color
+            MainStroke.Color = color
+            ToggleBtn.TextColor3 = color
+            task.wait(0.05)
+        end
+    end
+end)
+
+-- // DRAGGABLE // --
+local function MakeDrag(obj)
+    local dragging, dragStart, startPos
+    obj.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = obj.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    obj.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            if dragging then
+                local delta = input.Position - dragStart
+                obj.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            end
+        end
+    end)
+end
+MakeDrag(ToggleBtn)
+MakeDrag(MainFrame)
+
+ToggleBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
+
+-- // 3. КОНТЕНТ // --
+
+-- Кнопка закрытия
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 20, 0, 20)
+CloseBtn.Position = UDim2.new(1, -25, 0, 5)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+CloseBtn.Text = ""
+CloseBtn.Parent = MainFrame
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(1,0)
+CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
+
+-- Стрелки (Выступают за края)
+local PrevBtn = Instance.new("TextButton")
+PrevBtn.Text = "<"
+PrevBtn.Size = UDim2.new(0, 40, 0, 80)
+PrevBtn.Position = UDim2.new(0, -25, 0, 30) -- Торчит слева
+PrevBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+PrevBtn.TextColor3 = Color3.new(1,1,1)
+PrevBtn.Font = FONT_BOLD
+PrevBtn.TextSize = 25
+PrevBtn.ZIndex = 0
+PrevBtn.Parent = MainFrame
+Instance.new("UICorner", PrevBtn).CornerRadius = UDim.new(0, 8)
+
+local NextBtn = Instance.new("TextButton")
+NextBtn.Text = ">"
+NextBtn.Size = UDim2.new(0, 40, 0, 80)
+NextBtn.Position = UDim2.new(1, -15, 0, 30) -- Торчит справа
+NextBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+NextBtn.TextColor3 = Color3.new(1,1,1)
+NextBtn.Font = FONT_BOLD
+NextBtn.TextSize = 25
+NextBtn.ZIndex = 0
+NextBtn.Parent = MainFrame
+Instance.new("UICorner", NextBtn).CornerRadius = UDim.new(0, 8)
+
+-- Аватар
+local Avatar = Instance.new("ImageLabel")
+Avatar.Size = UDim2.new(0, 70, 0, 70)
+Avatar.Position = UDim2.new(0, 20, 0, 20)
+Avatar.BackgroundColor3 = Color3.fromRGB(30,30,30)
+Avatar.Parent = MainFrame
+Instance.new("UICorner", Avatar).CornerRadius = UDim.new(0, 10)
+local AvStroke = Instance.new("UIStroke")
+AvStroke.Parent = Avatar
+AvStroke.Thickness = 2
+AvStroke.Color = Color3.fromRGB(255,255,255)
+
+-- ИНФО О ИГРОКЕ (НИКИ + КОПИРОВАНИЕ)
+local InfoContainer = Instance.new("Frame")
+InfoContainer.Size = UDim2.new(0, 200, 0, 70)
+InfoContainer.Position = UDim2.new(0, 100, 0, 20)
+InfoContainer.BackgroundTransparency = 1
+InfoContainer.Parent = MainFrame
+
+local function CreateCopyBtn(parent, textFunc, yPos)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 40, 0, 20)
+    btn.Position = UDim2.new(1, -45, 0, yPos)
+    btn.BackgroundColor3 = Color3.fromRGB(40,40,50)
+    btn.Text = "COPY"
+    btn.TextColor3 = Color3.fromRGB(0, 255, 200)
+    btn.Font = FONT_BOLD
+    btn.TextSize = 9
+    btn.Parent = parent
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+    
+    btn.MouseButton1Click:Connect(function()
+        local txt = textFunc()
+        if txt then 
+            setclipboard(txt)
+            btn.Text = "OK"
+            btn.TextColor3 = Color3.new(0,1,0)
+            task.wait(0.5)
+            btn.Text = "COPY"
+            btn.TextColor3 = Color3.fromRGB(0, 255, 200)
+        end
+    end)
+end
+
+local DispName = Instance.new("TextLabel")
+DispName.Size = UDim2.new(1, -50, 0, 25)
+DispName.BackgroundTransparency = 1
+DispName.Text = "DisplayName"
+DispName.TextColor3 = Color3.new(1,1,1)
+DispName.TextXAlignment = Enum.TextXAlignment.Left
+DispName.Font = FONT_BOLD
+DispName.TextScaled = true
+DispName.Parent = InfoContainer
+CreateCopyBtn(InfoContainer, function() return DispName.Text end, 2)
+
+local UsrName = Instance.new("TextLabel")
+UsrName.Size = UDim2.new(1, -50, 0, 20)
+UsrName.Position = UDim2.new(0, 0, 0, 28)
+UsrName.BackgroundTransparency = 1
+UsrName.Text = "@Username"
+UsrName.TextColor3 = Color3.fromRGB(150,150,150)
+UsrName.TextXAlignment = Enum.TextXAlignment.Left
+UsrName.Font = Enum.Font.Gotham
+UsrName.TextSize = 14
+UsrName.Parent = InfoContainer
+CreateCopyBtn(InfoContainer, function() return UsrName.Text end, 28)
+
+local AgeLabel = Instance.new("TextLabel")
+AgeLabel.Size = UDim2.new(1, 0, 0, 15)
+AgeLabel.Position = UDim2.new(0, 0, 0, 52)
+AgeLabel.BackgroundTransparency = 1
+AgeLabel.Text = "Reg: 2020 (500 days ago)"
+AgeLabel.TextColor3 = Color3.fromRGB(100,100,100)
+AgeLabel.TextXAlignment = Enum.TextXAlignment.Left
+AgeLabel.Font = Enum.Font.Code
+AgeLabel.TextSize = 11
+AgeLabel.Parent = InfoContainer
+
+-- ХАКЕРСКИЙ ТЕРМИНАЛ (STATS)
+local Terminal = Instance.new("Frame")
+Terminal.Size = UDim2.new(1, -20, 0, 80)
+Terminal.Position = UDim2.new(0, 10, 0, 100)
+Terminal.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
+Terminal.Parent = MainFrame
+Instance.new("UICorner", Terminal).CornerRadius = UDim.new(0, 6)
+Instance.new("UIStroke", Terminal).Color = Color3.fromRGB(40,40,40)
+
+local TerminalTxt = Instance.new("TextLabel")
+TerminalTxt.Size = UDim2.new(1, -10, 1, -10)
+TerminalTxt.Position = UDim2.new(0, 5, 0, 5)
+TerminalTxt.BackgroundTransparency = 1
+TerminalTxt.TextColor3 = Color3.fromRGB(0, 255, 100)
+TerminalTxt.Font = FONT_CODE
+TerminalTxt.TextSize = 10
+TerminalTxt.TextXAlignment = Enum.TextXAlignment.Left
+TerminalTxt.TextYAlignment = Enum.TextYAlignment.Top
+TerminalTxt.RichText = true
+TerminalTxt.Text = "Gathering Data..."
+TerminalTxt.Parent = Terminal
+
+-- КНОПКИ ДЕЙСТВИЙ (Нижний ряд)
+local ButtonGrid = Instance.new("Frame")
+ButtonGrid.Size = UDim2.new(1, -20, 0, 65)
+ButtonGrid.Position = UDim2.new(0, 10, 1, -70)
+ButtonGrid.BackgroundTransparency = 1
+ButtonGrid.Parent = MainFrame
+
+local UIGrid = Instance.new("UIGridLayout")
+UIGrid.CellSize = UDim2.new(0, 75, 0, 28)
+UIGrid.CellPadding = UDim2.new(0, 5, 0, 5)
+UIGrid.Parent = ButtonGrid
+
+local function MakeActionBtn(text, col, func)
+    local b = Instance.new("TextButton")
+    b.Text = text
+    b.BackgroundColor3 = col
+    b.TextColor3 = Color3.new(1,1,1)
+    b.Font = FONT_BOLD
+    b.TextSize = 10
+    b.Parent = ButtonGrid
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+    b.MouseButton1Click:Connect(func)
+    return b
+end
+
+-- // ЛОГИКА ИГРОКОВ // --
+local PlayersTable = {}
+local CurrentIdx = 1
+local SelectedPlayer = nil
+local HighlightObj = nil
+
+-- Обновление списка
+local function RefreshPlrs()
+    PlayersTable = Players:GetPlayers()
+end
+
+-- Логика переключения
+local function UpdateUI()
+    RefreshPlrs()
+    if #PlayersTable == 0 then return end
+    
+    if CurrentIdx > #PlayersTable then CurrentIdx = 1 end
+    if CurrentIdx < 1 then CurrentIdx = #PlayersTable end
+    
+    SelectedPlayer = PlayersTable[CurrentIdx]
+    
+    -- Тексты
+    DispName.Text = SelectedPlayer.DisplayName
+    UsrName.Text = "@" .. SelectedPlayer.Name
+    
+    -- Дата регистрации
+    local days = SelectedPlayer.AccountAge
+    local year = os.date("%Y", os.time() - (days * 86400))
+    AgeLabel.Text = string.format("Reg: %s (%s days)", year, days)
+    
+    -- Аватар
+    task.spawn(function()
+        local icon = Players:GetUserThumbnailAsync(SelectedPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+        Avatar.Image = icon
+    end)
+
+    -- Обводка (Свой/Чужой)
+    if SelectedPlayer == LocalPlayer then
+        AvStroke.Color = Color3.fromRGB(0, 170, 255)
+    else
+        AvStroke.Color = Color3.fromRGB(255, 50, 50)
+    end
+    
+    -- XRAY / Highlight update
+    if Settings.Xray then
+        if HighlightObj then HighlightObj:Destroy() end
+        if SelectedPlayer.Character then
+            HighlightObj = Instance.new("Highlight")
+            HighlightObj.FillColor = Color3.fromRGB(255, 0, 0)
+            HighlightObj.OutlineColor = Color3.fromRGB(255, 255, 255)
+            HighlightObj.FillTransparency = 0.5
+            HighlightObj.OutlineTransparency = 0
+            HighlightObj.Parent = SelectedPlayer.Character
+        end
+    end
+end
+
+PrevBtn.MouseButton1Click:Connect(function() CurrentIdx -= 1; UpdateUI() end)
+NextBtn.MouseButton1Click:Connect(function() CurrentIdx += 1; UpdateUI() end)
+
+-- // КНОПКИ // --
+
+-- 1. VIEW
+local ViewBtn = MakeActionBtn("VIEW: OFF", Color3.fromRGB(60,60,60), function()
+    Settings.AutoView = not Settings.AutoView
+end)
+
+-- 2. NOCLIP (Local)
+local NoclipBtn = MakeActionBtn("NOCLIP", Color3.fromRGB(60,60,60), function()
+    Settings.Noclip = not Settings.Noclip
+end)
+
+-- 3. XRAY
+local XrayBtn = MakeActionBtn("XRAY: OFF", Color3.fromRGB(60,60,60), function()
+    Settings.Xray = not Settings.Xray
+    if not Settings.Xray and HighlightObj then HighlightObj:Destroy() end
+    if Settings.Xray then UpdateUI() end -- Apply immediately
+end)
+
+-- 4. NO FOG
+MakeActionBtn("NO FOG", Color3.fromRGB(100, 100, 150), function()
+    Lighting.FogEnd = 999999
+    Lighting.FogStart = 999999
+end)
+
+-- 5. DAY
+MakeActionBtn("DAY", Color3.fromRGB(255, 150, 0), function()
+    Lighting.ClockTime = 14
+end)
+
+-- 6. NIGHT
+MakeActionBtn("NIGHT", Color3.fromRGB(100, 0, 255), function()
+    Lighting.ClockTime = 0
+end)
+
+-- 7. TP TO
+MakeActionBtn("TP TO", Color3.fromRGB(0, 150, 255), function()
+    if SelectedPlayer and SelectedPlayer.Character and SelectedPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = SelectedPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 2, 4)
+    end
+end)
+
+-- 8. FLING (Ultimate)
+MakeActionBtn("FLING", Color3.fromRGB(200, 30, 30), function()
+    if not SelectedPlayer or not SelectedPlayer.Character then return end
+    local Target = SelectedPlayer.Character:FindFirstChild("HumanoidRootPart")
+    local MyRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    
+    if Target and MyRoot then
+        local OldPos = MyRoot.CFrame
+        local BV = Instance.new("BodyVelocity")
+        BV.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        BV.Velocity = Vector3.new(10000, 10000, 10000)
+        BV.Parent = MyRoot
+        
+        local BAV = Instance.new("BodyAngularVelocity")
+        BAV.AngularVelocity = Vector3.new(10000, 10000, 10000)
+        BAV.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        BAV.Parent = MyRoot
+        
+        for i=1, 10 do
+            MyRoot.CFrame = Target.CFrame
+            task.wait(0.1)
+        end
+        
+        BV:Destroy()
+        BAV:Destroy()
+        MyRoot.Velocity = Vector3.zero
+        MyRoot.CFrame = OldPos
+    end
+end)
+
+-- // LOOP UPDATES (REALTIME) // --
+RunService.RenderStepped:Connect(function()
+    -- Update Toggle Visuals
+    ViewBtn.Text = Settings.AutoView and "VIEW: ON" or "VIEW: OFF"
+    ViewBtn.BackgroundColor3 = Settings.AutoView and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(60,60,60)
+    
+    NoclipBtn.BackgroundColor3 = Settings.Noclip and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(60,60,60)
+    
+    XrayBtn.Text = Settings.Xray and "XRAY: ON" or "XRAY: OFF"
+    XrayBtn.BackgroundColor3 = Settings.Xray and Color3.fromRGB(200, 0, 200) or Color3.fromRGB(60,60,60)
+
+    -- Auto View Logic
+    if Settings.AutoView and SelectedPlayer and SelectedPlayer.Character then
+        local hum = SelectedPlayer.Character:FindFirstChild("Humanoid")
+        if hum then Camera.CameraSubject = hum end
+    else
+        if Camera.CameraSubject ~= LocalPlayer.Character:FindFirstChild("Humanoid") then
+            Camera.CameraSubject = LocalPlayer.Character:FindFirstChild("Humanoid")
+        end
+    end
+
+    -- Noclip Logic
+    if Settings.Noclip and LocalPlayer.Character then
+        for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
+            if v:IsA("BasePart") and v.CanCollide then v.CanCollide = false end
+        end
+    end
+
+    -- Terminal Data Update
+    if MainFrame.Visible and SelectedPlayer then
+        local char = SelectedPlayer.Character
+        local hp = "DEAD"
+        local dist = "N/A"
+        local team = tostring(SelectedPlayer.TeamColor)
+        local tool = "None"
+        local pos = "Unknown"
+        
+        if char then
+            local hum = char:FindFirstChild("Humanoid")
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            
+            if hum then 
+                hp = math.floor(hum.Health).."/"..math.floor(hum.MaxHealth)
+            end
+            
+            if hrp then
+                pos = string.format("%d, %d, %d", hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - hrp.Position).Magnitude) .. " studs"
+                end
+            end
+            
+            local t = char:FindFirstChildWhichIsA("Tool")
+            if t then tool = t.Name end
+        end
+
+        TerminalTxt.Text = string.format(
+            [[<font color="#55ffff">ID:</font> %s   <font color="#55ffff">HP:</font> %s
+<font color="#ffaa00">Team:</font> %s   <font color="#ff55ff">Tool:</font> %s
+<font color="#00ff00">Dist:</font> %s
+<font color="#aaaaaa">Pos:</font> %s]], 
+            SelectedPlayer.UserId, hp, team, tool, dist, pos
+        )
+    end
+end)
+
+-- INIT
+UpdateUI()
+print("OMNITRIX V4 LOADED - MASTER TEACHER")
